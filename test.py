@@ -1,16 +1,18 @@
 from processing import deephase_data
 import model
-import encoder
+import torch
 
-if __name__ == '__main__':
-    print('test')
-    data, categories = deephase_data()
-    esm = model.ESM()
-    num_layers = 1
-    model_dim = 12
-    num_heads = 3
-    ff_dim = 12
-    encoder = encoder.Encoder(num_layers, model_dim, num_heads, ff_dim)
-    print(data[0])
-    test_output = esm.get_representation([data[0]])
-    print(test_output)
+print('test.py')
+out_dir = 'script-output/'
+data, categories = deephase_data()
+# test_data = [
+#     ("protein1", "MKTVRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDIAYLRSLGYNIVATPRGYVLAGG"),
+#     ("protein2", "KALTARQQEVFDLIRDHISQTGMPPTRAEIAQRLGFRSPNAAEEHLKALARKGVIEIVSGASRGIRLLQEE"),
+#     ("protein2 with mask","KALTARQQEVFDLIRD<mask>ISQTGMPPTRAEIAQRLGFRSPNAAEEHLKALARKGVIEIVSGASRGIRLLQEE"),
+#     ("protein3",  "K A <mask> I S Q"),
+# ]
+esm = model.ESM()
+# test_output = esm.get_representation(test_data)
+test_output = esm.get_representation([data[0]])
+print(test_output.size())
+torch.save(test_output, out_dir + 'esm_embedding.pt')

@@ -20,7 +20,7 @@ def deephase_data(): # no features
     data = []
     # [LLPS+/-]
     categories = []
-    with open('./data/training_data_features.csv') as csvfile:
+    with open('llps-lm/data/training_data_features.csv') as csvfile:
         reader = csv.reader(csvfile)
         next(reader, None)
         for row in reader:
