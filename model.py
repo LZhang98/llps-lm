@@ -1,6 +1,5 @@
 import torch
 import esm.pretrained
-from encoder import Encoder
 
 class ESM():
 

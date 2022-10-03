@@ -17,7 +17,6 @@ class CustomDataset(Dataset):
         label = self.labels.iloc[index, 1]
         if label == 2:
             label = 1
-        print(self.labels.iloc[index, 0], label)
         return embedding, label
     
 # def my_collate(batch):

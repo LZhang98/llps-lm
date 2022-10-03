@@ -10,9 +10,30 @@ class Encoder (torch.nn.Module):
         encoder_layers = torch.nn.TransformerEncoderLayer(model_dim, num_heads, ff_dim, dropout)
         self.encoder = torch.nn.TransformerEncoder(encoder_layers, num_layers)
 
+        self.pool_flatten = torch.nn.Sequential(
+                                torch.nn.AvgPool1d(kernel_size=10, stride=10),
+                                torch.nn.Flatten()
+        )
+        #move fc layers out in the future
+        # self.fc1 = torch.nn.Linear(1280, 240)
+        # self.fc2 = torch.nn.Linear(240, 48)
+        # self.final = torch.nn.Linear(48, 1)
+        self.dense = torch.nn.Sequential(
+                        torch.nn.Linear(171008, 1280),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(1280, 240),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(240, 48),
+                        torch.nn.ReLU(),
+                        torch.nn.Linear(48, 1),
+                        torch.nn.Sigmoid()
+        )
+
     def forward(self, x, mask=None):
         x = self.pos_encoder(x)
         x = self.encoder(x)
+        x = self.pool_flatten(x)
+        x = self.dense(x)
         return x
 
 

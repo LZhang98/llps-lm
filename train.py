@@ -1,5 +1,4 @@
-import model
-import encoder
+from encoder import Encoder
 import torch
 from torch.utils.data import DataLoader
 from dataset import CustomDataset
@@ -8,10 +7,16 @@ from sklearn.model_selection import KFold
 
 if __name__ == '__main__':
 
-    # The preparatory steps.
+    # Hyperparams
     k_folds = 5
     num_epochs = 10
-    loss_function = torch.nn.CrossEntropyLoss()
+    loss_function = torch.nn.MSELoss()
+    learning_rate = 1e-4
+    num_layers = 5
+    model_dim = 1280
+    num_heads = 4
+    ff_dim = 1280
+
     results = {}
     # fixed seed
     torch.manual_seed(69)
@@ -19,15 +24,11 @@ if __name__ == '__main__':
     # Loading the dataset
     annotation = '/cluster/projects/kumargroup/luke/deephase_annotations_uniq.csv'
     data_dir = '/cluster/projects/kumargroup/luke/output/esm-embeddings-padded/'
-
     dataset = CustomDataset(annotations_file=annotation, data_dir=data_dir)
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
     # Defining the K-fold Cross Validator to generate the folds.
     kfold = KFold(n_splits=k_folds, shuffle=True)
     print('---------------------------------------')
-
-    # Then, generating the splits that we can actually use for training the model, which we also do - once for every fold.
 
     for fold, (train_ids, test_ids) in enumerate(kfold.split(dataset)):
         print('FOLD', fold)
@@ -37,15 +38,11 @@ if __name__ == '__main__':
         test_subsampler = torch.utils.data.SubsetRandomSampler(test_ids)
 
         # Define data loaders for training and testing data in this fold
-        trainloader = torch.utils.data.DataLoader(
-                      dataset, 
-                      batch_size=10, sampler=train_subsampler)
-        testloader = torch.utils.data.DataLoader(
-                      dataset,
-                      batch_size=10, sampler=test_subsampler)
+        trainloader = DataLoader(dataset, batch_size=32, sampler=train_subsampler)
+        testloader = DataLoader(dataset, batch_size=32, sampler=test_subsampler)
 
-        my_model = model.ESM()
-        optimizer = torch.optim.Adam(my_model.parameters(), lr=1e-4)
+        my_model = Encoder(num_layers, model_dim, num_heads, ff_dim)
+        optimizer = torch.optim.Adam(my_model.parameters(), lr=learning_rate)
 
         for epoch in range(num_epochs):
 
@@ -54,6 +51,8 @@ if __name__ == '__main__':
 
             for i, data in enumerate(trainloader, 0):
                 input, targets = data
+                input = input.squeeze().float()
+                targets = targets.unsqueeze(1).float()
                 optimizer.zero_grad()
                 outputs = my_model(input)
                 loss = loss_function(outputs, targets)
@@ -62,9 +61,39 @@ if __name__ == '__main__':
 
                 #Stats
                 current_loss += loss.item()
-                if i % 100 == 99:
-                    print('Loss after mini-batch %5d: %.3f' % (i + 1, current_loss / 500))
-                    current_loss = 0.0
+                print('Loss after mini-batch %5d: %.3f' % (i + 1, current_loss / 100))
+                current_loss = 0
+        
+        # Process is complete.
+        print('Training complete.')
+        # Saving the model
+        save_path = f'/cluster/projects/kumargroup/luke/output/trained_models/fold-{fold}.pth'
+        torch.save(my_model.state_dict(), save_path)
+
+        # Evaluation for this fold
+        correct, total = 0, 0
+        with torch.no_grad():
+
+            # Iterate over the test data and generate predictions
+            for i, data in enumerate(testloader, 0):
+
+                # Get inputs
+                inputs, targets = data
+                inputs = inputs.squeeze()
+                targets = targets.unsqueeze(1)
+
+                # Generate outputs
+                outputs = my_model(inputs)
+
+                # Set total and correct
+                predicted = (outputs > 0.5).float()
+                total += targets.size(0)
+                correct += (predicted == targets).sum().item()
+
+        # Print accuracy
+        print('Accuracy for fold %d: %d %%' % (fold, 100.0 * correct / total))
+        print('--------------------------------')
+        results[fold] = 100.0 * (correct / total)
 
     # After training for every fold, we evaluate the performance for that fold.
     # Finally, we perform performance evaluation for the model - across the folds.
