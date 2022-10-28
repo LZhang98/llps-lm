@@ -18,7 +18,9 @@ class CustomDataset(Dataset):
         if label == 2:
             label = 1
         return embedding, label
-    
+
+
+
 # def my_collate(batch):
 #     # get max embedding length
 #     max

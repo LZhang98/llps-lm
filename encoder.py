@@ -19,7 +19,7 @@ class Encoder (torch.nn.Module):
         # self.fc2 = torch.nn.Linear(240, 48)
         # self.final = torch.nn.Linear(48, 1)
         self.dense = torch.nn.Sequential(
-                        torch.nn.Linear(171008, 1280),
+                        torch.nn.Linear(1336 * (model_dim // 10), 1280),
                         torch.nn.ReLU(),
                         torch.nn.Linear(1280, 240),
                         torch.nn.ReLU(),

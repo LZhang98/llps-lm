@@ -2,7 +2,6 @@ from encoder import Encoder
 import torch
 from torch.utils.data import DataLoader
 from dataset import CustomDataset
-import os
 from sklearn.model_selection import KFold
 
 if __name__ == '__main__':
@@ -11,11 +10,12 @@ if __name__ == '__main__':
     k_folds = 5
     num_epochs = 10
     loss_function = torch.nn.MSELoss()
-    learning_rate = 1e-4
+    learning_rate = 1e-2
     num_layers = 5
     model_dim = 1280
     num_heads = 4
     ff_dim = 1280
+    batch_size = 32
 
     results = {}
     # fixed seed
@@ -38,8 +38,8 @@ if __name__ == '__main__':
         test_subsampler = torch.utils.data.SubsetRandomSampler(test_ids)
 
         # Define data loaders for training and testing data in this fold
-        trainloader = DataLoader(dataset, batch_size=32, sampler=train_subsampler)
-        testloader = DataLoader(dataset, batch_size=32, sampler=test_subsampler)
+        trainloader = DataLoader(dataset, batch_size=batch_size, sampler=train_subsampler)
+        testloader = DataLoader(dataset, batch_size=batch_size, sampler=test_subsampler)
 
         my_model = Encoder(num_layers, model_dim, num_heads, ff_dim)
         optimizer = torch.optim.Adam(my_model.parameters(), lr=learning_rate)
@@ -61,13 +61,16 @@ if __name__ == '__main__':
 
                 #Stats
                 current_loss += loss.item()
-                print('Loss after mini-batch %5d: %.3f' % (i + 1, current_loss / 100))
+                print('Loss after mini-batch %5d: %.3f' % (i + 1, current_loss))
                 current_loss = 0
+                break 
+        
         
         # Process is complete.
         print('Training complete.')
         # Saving the model
-        save_path = f'/cluster/projects/kumargroup/luke/output/trained_models/fold-{fold}.pth'
+        # save_path = f'/cluster/projects/kumargroup/luke/output/trained_models/fold-{fold}.pth'
+        save_path = f'/cluster/projects/kumargroup/luke/output/new_models/fold-{fold}.pth'
         torch.save(my_model.state_dict(), save_path)
 
         # Evaluation for this fold
